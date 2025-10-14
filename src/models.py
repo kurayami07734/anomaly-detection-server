@@ -1,8 +1,9 @@
 from typing import Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 import uuid
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel, Column
 from sqlalchemy import TIMESTAMP, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -36,3 +37,18 @@ class Transaction(TransactionBase, table=True):
         nullable=False,
     )
     user_id: uuid.UUID = Field(sa_column=Column(UUID(as_uuid=True), nullable=False))
+
+
+class TransactionFilters(BaseModel):
+    user_id: uuid.UUID
+    from_date: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=30)
+    to_date: Optional[datetime] = datetime.now(tz=timezone.utc)
+    min_amount: Optional[Decimal] = Decimal("0.00")
+    max_amount: Optional[Decimal] = Decimal("10000000000.00")
+    limit: Optional[int] = 100
+    cursor: Optional[str] = None
+
+
+class ListTransactionsResponse(BaseModel):
+    transactions: list[Transaction]
+    cursor: str

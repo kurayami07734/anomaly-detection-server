@@ -1,0 +1,42 @@
+services:
+  server:
+    env_file:
+      - ./.env
+    build: .
+    container_name: anomaly-detector-server
+    command:
+      [
+        "uv",
+        "run",
+        "fastapi",
+        "dev",
+        "src/main.py",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
+    volumes:
+      - .:/app
+      - /app/.venv
+    ports:
+      - 8000:8000
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  database:
+    image: postgres:16.4
+    container_name: anomaly-detector-db
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: anomaly_detector
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    driver: local

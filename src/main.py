@@ -2,11 +2,16 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from src.routers.transaction import router as transaction_router
+from src.routers.sse import router as sse_router
 
 
-app = FastAPI(title="Anomaly Detector", description="Transaction anomaly detection")
+app = FastAPI(
+    title="Anomaly Detector",
+    description="Transaction anomaly detection",
+)
 
 app.include_router(transaction_router)
+app.include_router(sse_router)
 
 
 @app.get("/", include_in_schema=False)

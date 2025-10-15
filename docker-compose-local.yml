@@ -22,8 +22,13 @@ services:
     ports:
       - 8000:8000
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - app-network
 
   database:
     image: postgres:16.4
@@ -36,7 +41,37 @@ services:
       POSTGRES_DB: anomaly_detector
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:6.2.6
+    container_name: anomaly-detector-redis
+    command: redis-server --appendonly yes
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
     driver: local
+  redis_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

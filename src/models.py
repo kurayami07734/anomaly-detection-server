@@ -28,7 +28,9 @@ class Transaction(TransactionBase, table=True):
     __tablename__ = "transactions"
 
     # Composite index for the primary query pattern
-    __table_args__ = (Index("ix_user_date_id", "user_id", "txn_date", "id"),)
+    __table_args__ = (
+        Index("ix_user_date_amount_id", "user_id", "txn_date", "amount", "id"),
+    )
 
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4,

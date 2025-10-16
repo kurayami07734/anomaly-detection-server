@@ -1,5 +1,42 @@
 # anomaly-detection-server
 
+## Architecture
+
+The application consists of three main services orchestrated by Docker Compose: a FastAPI web server, a PostgreSQL database, and a Redis cache.
+
+1. Client: A web browser or any other HTTP client that connects to the SSE endpoint to receive real-time transaction data.
+2. FastAPI Server: The core of the application. It handles incoming connections, simulates new transactions, checks for anomalies, and streams the results.
+PostgreSQL Database: The primary data store for persisting all generated transaction records.
+3. Redis: Used as a fast, in-memory cache to store a rolling window of recent transaction amounts for each user, which is essential for calculating the rolling mean for anomaly detection.
+
+```txt
+                   +----------------+
+                   |                |
+                   |     Client     |
+                   | (Web Browser)  |
+                   |                |
+                   +-------+--------+
+                           |
+           HTTP Request / SSE Connection
+                           |
+                   +-------v--------+
+                   |  FastAPI Server|
+                   | (Docker Service) |
+                   +-------+--------+
+                           |
+         +-----------------+-----------------+
+         |                                   |
++--------v--------+                +---------v---------+
+|                 |   SQL Queries  |                   |
+|      Redis      |<---------------+    PostgreSQL     |
+| (Rolling Window)|                |   (Transactions)  |
+| (Docker Service) |---------------> (Docker Service)  |
+|                 |  Cache Updates |                   |
++-----------------+                +-------------------+
+```
+
+
+
 ## Setup locally
 
 ```bash

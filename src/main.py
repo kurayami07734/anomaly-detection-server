@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.routers.transaction import router as transaction_router
 from src.routers.sse import router as sse_router
@@ -8,6 +9,14 @@ from src.routers.sse import router as sse_router
 app = FastAPI(
     title="Anomaly Detector",
     description="Transaction anomaly detection",
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET"],
 )
 
 app.include_router(transaction_router)

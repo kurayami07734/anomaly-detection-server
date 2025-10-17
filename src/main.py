@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.routers.transaction import router as transaction_router
 from src.routers.sse import router as sse_router
+from src.routers.users import router as users_router
 
 
 app = FastAPI(
@@ -21,6 +22,7 @@ app.add_middleware(
 
 app.include_router(transaction_router)
 app.include_router(sse_router)
+app.include_router(users_router)
 
 
 @app.get("/", include_in_schema=False)

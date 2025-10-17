@@ -54,3 +54,7 @@ class TransactionFilters(BaseModel):
 class ListTransactionsResponse(BaseModel):
     transactions: list[Transaction]
     cursor: str
+
+
+class ListUsersResponse(BaseModel):
+    users: list[uuid.UUID]

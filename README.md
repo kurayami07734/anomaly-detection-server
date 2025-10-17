@@ -1,65 +1,63 @@
 # anomaly-detection-server
 
-## Architecture
+Deployment link https://anomaly-detection-server-0-0-1.onrender.com/
 
-The application consists of three main services orchestrated by Docker Compose: a FastAPI web server, a PostgreSQL database, and a Redis cache.
+Experiment with the API https://anomaly-detection-server-0-0-1.onrender.com/docs (swagger docs)
 
-1. Client: A web browser or any other HTTP client that connects to the SSE endpoint to receive real-time transaction data.
-2. FastAPI Server: The core of the application. It handles incoming connections, simulates new transactions, checks for anomalies, and streams the results.
-PostgreSQL Database: The primary data store for persisting all generated transaction records.
-3. Redis: Used as a fast, in-memory cache to store a rolling window of recent transaction amounts for each user, which is essential for calculating the rolling mean for anomaly detection.
+## Frontend
 
-```txt
-                   +----------------+
-                   |                |
-                   |     Client     |
-                   | (Web Browser)  |
-                   |                |
-                   +-------+--------+
-                           |
-           HTTP Request / SSE Connection
-                           |
-                   +-------v--------+
-                   |  FastAPI Server|
-                   | (Docker Service) |
-                   +-------+--------+
-                           |
-         +-----------------+-----------------+
-         |                                   |
-+--------v--------+                +---------v---------+
-|                 |   SQL Queries  |                   |
-|      Redis      |<---------------+    PostgreSQL     |
-| (Rolling Window)|                |   (Transactions)  |
-| (Docker Service) |---------------> (Docker Service)  |
-|                 |  Cache Updates |                   |
-+-----------------+                +-------------------+
-```
+Github: https://github.com/kurayami07734/anomaly-detection-client
+
+Deployment link: https://anomaly-detection-client.vercel.app/
+
+### Table of contents
+
+1. [System Design](#system-design)
+2. [Query performance](#query-performance)
+3. [Setup locally](#setup-locally)
+4. [API calls](#api-calls)
 
 
+## System design
 
-## Setup locally
-
-```bash
-cp .env.example .env
-```
-
-```bash
-docker compose --file docker-compose-local.yml up
-```
+![Architecture diagram](./anomaly-detection-system-design.png)
 
 
-### Load data
+### Components
 
-```bash
-docker exec -it anomaly-detector-server sh
-```
-
-```bash
-uv run python load_data.py
-```
+1. **Client**: Simple web client, it makes GET requests and has a Server sent events connections
+2. **Server**: Serves web requests, has connections to postgres database and redis
+3. **Transaction producer**: This is created inside the FastAPI server, it is created when client make request for SSE events for a particular user.
+     It also checks whether the transaction is anomalous. 
 
 
-## Query performance 
+### Anomaly detection logic
+
+1. Maintain the recent transactions for a user in redis
+2. When new transaction is generated in the producer, this amount is compared to the rolling mean of the recent transactions.
+
+#### Note
+
+The transaction producer is also handling the anomaly detection logic. This is done to avoid having an extra detection service that runs persistently.
+This is reduces the issues around having multiple servers having access to the database.
+
+There will be as many transactions producers running as many users are connected for the SSE events.
+
+## Scalability 
+
+### Indexes added
+1. id index => To enforce unique constraint on primary key
+2. ix_user_date_amount_id => To improve query performance of primary data access pattern
+
+### Partitioning
+
+I have skipped partitioning here to keep the code simple.
+But partitioning by transaction date, into monthly or weekly partitions will work nicely
+
+### Caching 
+
+Not added yet. One approach would be to create a hash from the all filters passed to the transactions API, and cache the result in redis.
+
 
 Primary query looks like the following
 
@@ -109,4 +107,50 @@ Limit  (cost=3.61..325.85 rows=100 width=79) (actual time=0.182..0.271 rows=100 
                            AND (amount > ...))
 Planning Time: 0.191 ms
 Execution Time: 0.337 ms
+```
+
+## Setup locally
+
+```bash
+cp .env.example .env
+```
+
+```bash
+docker compose --file docker-compose-local.yml up
+```
+
+
+### Load data
+
+```bash
+docker exec -it anomaly-detector-server sh
+```
+
+```bash
+uv run python load_data.py
+```
+
+
+## API calls
+
+curl commands to call the APIs
+
+### Get transactions API
+
+```bash
+curl -X 'GET' \
+  'https://anomaly-detection-server-0-0-1.onrender.com/transactions?user_id=35e1757d-a92a-4f07-a2ae-c13b81fd5581&from_date=2025-09-17T03%3A33%3A09.262961Z&to_date=2025-10-17T03%3A33%3A09.263008Z&min_amount=0.00&max_amount=10000000000.00&limit=100' \
+  -H 'accept: application/json'
+```
+
+### User transaction SSE
+
+```bash
+curl -N https://anomaly-detection-server-0-0-1.onrender.com/sse/transactions/<user_id>
+```
+
+### Check health
+
+```bash
+curl https://anomaly-detection-server-0-0-1.onrender.com/health
 ```

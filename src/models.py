@@ -5,7 +5,7 @@ import uuid
 
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import TIMESTAMP, Index
+from sqlalchemy import TIMESTAMP, Index, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 
@@ -18,7 +18,8 @@ class TransactionBase(SQLModel):
     )
     status: str = Field(max_length=32)
     meta_data: Optional[dict[str, Any]] = Field(
-        default=None, sa_column=Column(JSONB, nullable=True)
+        default=None,
+        sa_column=Column(JSONB().with_variant(JSON, "sqlite"), nullable=True),
     )
 
 

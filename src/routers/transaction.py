@@ -1,5 +1,6 @@
 from typing import Annotated
 from datetime import datetime
+import uuid
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import asc
@@ -30,7 +31,7 @@ async def get_transactions(
         if params.cursor:
             cursor_data = decode_base64(params.cursor)
             cursor_date = datetime.fromisoformat(cursor_data["txn_date"])
-            cursor_id = cursor_data["id"]
+            cursor_id = uuid.UUID(cursor_data["id"])
             conditions.append(
                 (Transaction.txn_date < cursor_date)
                 | ((Transaction.txn_date == cursor_date) & (Transaction.id < cursor_id))

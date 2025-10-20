@@ -4,9 +4,9 @@ from typing import AsyncGenerator, Generator
 import uuid
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel
 
 from src.database import get_session
@@ -18,14 +18,19 @@ DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 USERS = [uuid.uuid4() for _ in range(10)]
 
-engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,  # Set to True for debugging
+    future=True,
+    connect_args={"check_same_thread": False},
+)
 
-TestSessionMaker = sessionmaker(
-    autocommit=False,
-    autoflush=False,
+TestSessionMaker = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
 )
 
 
@@ -37,7 +42,7 @@ def event_loop(request) -> Generator:
     loop.close()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Fixture to create and teardown the test database for each test function.
@@ -46,18 +51,19 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(SQLModel.metadata.create_all)
 
     async with TestSessionMaker() as session:
-        async with session.begin():
-            txns = [
-                Transaction(
-                    user_id=user_id,
-                    amount=100.00,
-                    currency="INR",
-                    txn_date=datetime.now(tz=timezone.utc),
-                    status="paid",
-                )
-                for user_id in USERS
-            ]
-            session.add_all(txns)
+        # Seed initial test data
+        txns = [
+            Transaction(
+                user_id=user_id,
+                amount=100.00,
+                currency="INR",
+                txn_date=datetime.now(tz=timezone.utc),
+                status="paid",
+            )
+            for user_id in USERS
+        ]
+        session.add_all(txns)
+        await session.commit()
 
         yield session
 
@@ -65,15 +71,20 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(SQLModel.metadata.drop_all)
 
 
-@pytest.fixture(scope="function")
-async def client(db_session: AsyncSession) -> AsyncGenerator[TestClient, None]:
+@pytest_asyncio.fixture(scope="function")
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """
-    Fixture to create a TestClient with the database session dependency overridden.
+    Fixture to create an AsyncClient with the database session dependency overridden.
     """
 
     async def get_session_override() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
     app.dependency_overrides[get_session] = get_session_override
-    yield TestClient(app)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        yield client
+
     app.dependency_overrides.clear()

@@ -16,6 +16,7 @@ Deployment link: https://anomaly-detection-client.vercel.app/
 2. [Query performance](#query-performance)
 3. [Setup locally](#setup-locally)
 4. [API calls](#api-calls)
+5. [Testing](#testing)
 
 
 ## System design
@@ -153,4 +154,17 @@ curl -N https://anomaly-detection-server-0-0-1.onrender.com/sse/transactions/<us
 
 ```bash
 curl https://anomaly-detection-server-0-0-1.onrender.com/health
+```
+
+## Testing
+
+Run integration tests locally
+
+```bash
+# install dev dependencies
+uv sync --dev
+```
+
+```bash
+pytest
 ```

@@ -1,5 +1,7 @@
 # anomaly-detection-server
 
+[![Run Integration Tests](https://github.com/kurayami07734/anomaly-detection-server/actions/workflows/main.yml/badge.svg)](https://github.com/kurayami07734/anomaly-detection-server/actions/workflows/main.yml)
+
 Deployment link https://anomaly-detection-server-0-0-1.onrender.com/
 
 Experiment with the API https://anomaly-detection-server-0-0-1.onrender.com/docs (swagger docs)

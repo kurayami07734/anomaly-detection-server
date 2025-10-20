@@ -1,10 +1,18 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import os
 from typing import AsyncGenerator, Generator
 import uuid
 
 import pytest
 import pytest_asyncio
+
+# Set dummy environment variables before importing the app
+# This is to prevent Pydantic from raising a ValidationError
+# when the tests are being collected.
+os.environ["POSTGRES_URL"] = "postgresql+asyncpg://test:test@localhost/test"
+os.environ["REDIS_URL"] = "redis://localhost"
+
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlmodel import SQLModel
@@ -57,7 +65,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
                 user_id=user_id,
                 amount=100.00,
                 currency="INR",
-                txn_date=datetime.now(tz=timezone.utc),
+                txn_date=(datetime.now(tz=timezone.utc) - timedelta(days=365)),
                 status="paid",
             )
             for user_id in USERS

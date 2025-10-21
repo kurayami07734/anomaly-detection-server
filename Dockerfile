@@ -7,11 +7,10 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock /app/
 
-RUN uv sync --frozen --no-cache
+RUN uv sync --frozen --no-cache --no-dev
 
 COPY . /app
 
 EXPOSE 8000
 
-CMD ["uv", "run", "fastapi", "run", "src/main.py", "--host", "0.0.0.0", "--port", "8000"]
-
+CMD ["/app/.venv/bin/uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

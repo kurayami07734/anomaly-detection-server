@@ -1,10 +1,9 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.config import CONFIG
-
 
 engine = create_async_engine(CONFIG.POSTGRES_URL, echo=True, future=True)
 

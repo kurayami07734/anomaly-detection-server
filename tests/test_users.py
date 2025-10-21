@@ -1,5 +1,7 @@
 import uuid
+
 from httpx import AsyncClient
+
 from tests.conftest import USERS
 
 

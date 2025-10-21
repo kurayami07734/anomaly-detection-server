@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-
 from urllib.parse import urlencode
-from httpx import AsyncClient
+
 import pytest
 import pytest_asyncio
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Transaction
@@ -14,7 +14,7 @@ from tests.conftest import USERS
 @pytest.fixture(scope="module")
 def fixed_utc_now() -> datetime:
     """Return a fixed, timezone-aware datetime object for deterministic tests."""
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 @pytest_asyncio.fixture(scope="function")

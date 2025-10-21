@@ -1,12 +1,12 @@
-from typing import Optional, Any
-from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 import uuid
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import TIMESTAMP, Index, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import JSON, TIMESTAMP, Index
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlmodel import Column, Field, SQLModel
 
 
 class TransactionBase(SQLModel):
@@ -17,7 +17,7 @@ class TransactionBase(SQLModel):
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
     )
     status: str = Field(max_length=32)
-    meta_data: Optional[dict[str, Any]] = Field(
+    meta_data: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSONB().with_variant(JSON, "sqlite"), nullable=True),
     )
@@ -44,12 +44,12 @@ class Transaction(TransactionBase, table=True):
 
 class TransactionFilters(BaseModel):
     user_id: uuid.UUID
-    from_date: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=30)
-    to_date: Optional[datetime] = datetime.now(tz=timezone.utc)
-    min_amount: Optional[Decimal] = Decimal("0.00")
-    max_amount: Optional[Decimal] = Decimal("10000000000.00")
-    limit: Optional[int] = 100
-    cursor: Optional[str] = None
+    from_date: datetime | None = datetime.now(tz=UTC) - timedelta(days=30)
+    to_date: datetime | None = datetime.now(tz=UTC)
+    min_amount: Decimal | None = Decimal("0.00")
+    max_amount: Decimal | None = Decimal("10000000000.00")
+    limit: int | None = 100
+    cursor: str | None = None
 
 
 class ListTransactionsResponse(BaseModel):

@@ -16,7 +16,7 @@ Deployment link: https://anomaly-detection-client.vercel.app/
 
 1. [System Design](#system-design)
 2. [Query performance](#query-performance)
-3. [Setup locally](#setup-locally)
+3. [Setup locally](#run-locally)
 4. [API calls](#api-calls)
 5. [Testing](#testing)
 
@@ -112,7 +112,7 @@ Planning Time: 0.191 ms
 Execution Time: 0.337 ms
 ```
 
-## Setup locally
+## Run locally
 
 ```bash
 cp .env.example .env
@@ -122,6 +122,15 @@ cp .env.example .env
 docker compose --file docker-compose-local.yml up
 ```
 
+### Local dev setup
+
+```bash
+uv sync --dev
+```
+
+```bash
+pre-commit install
+```
 
 ### Load data
 

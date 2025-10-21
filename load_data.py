@@ -1,18 +1,17 @@
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
-from typing import AsyncGenerator
 import asyncio
-from collections import deque
-import uuid
 import random
+import uuid
+from collections import deque
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-from src.models import Transaction
 from src.config import CONFIG
-
+from src.models import Transaction
 
 engine = create_async_engine(CONFIG.POSTGRES_URL, echo=True, future=True)
 
@@ -49,9 +48,10 @@ async def main() -> None:
     ANOMALY_CHANCE = 0.35
 
     for user_id in user_ids:
-        # Maintain a deque for the rolling window of recent transaction amounts for each user
+        # Maintain a deque for the rolling window
+        # of recent transaction amounts for each user
         recent_amounts = deque(maxlen=ROLLING_WINDOW_SIZE)
-        start_date = datetime.now(tz=timezone.utc)
+        start_date = datetime.now(tz=UTC)
 
         for _ in range(15_000):
             # Introduce occasional large spikes to generate more anomalies
@@ -61,7 +61,8 @@ async def main() -> None:
                     Decimal("0.01")
                 )
             else:
-                # Normal transaction: generate a small amount to keep the rolling mean low
+                # Normal transaction: generate a small amount
+                # to keep the rolling mean low
                 amount = Decimal(random.uniform(10.0, 500.0)).quantize(Decimal("0.01"))
 
             status = random.choice(["paid", "failed"])

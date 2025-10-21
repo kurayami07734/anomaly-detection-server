@@ -17,7 +17,8 @@ def encode_base64(data: dict[str, Any]) -> str:
 
 def decode_base64(base64_string: str) -> dict[str, Any]:
     """
-    Decodes a base64 string into bytes, then deserializes the JSON string to a dictionary.
+    Decodes a base64 string into bytes, then deserializes the
+    JSON string to a dictionary.
     """
     json_bytes = base64.b64decode(base64_string.encode("utf-8"))
     return json.loads(json_bytes.decode("utf-8"))

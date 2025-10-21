@@ -1,9 +1,10 @@
 import asyncio
+import logging
 import random
 import uuid
-from datetime import datetime, timezone
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import AsyncGenerator, List, Tuple
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -15,6 +16,7 @@ from src.models import Transaction
 from src.redis import get_redis
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # Simulation constants
@@ -27,7 +29,7 @@ ANOMALY_MULTIPLIER = 5
 
 async def _get_rolling_mean(
     redis_client: Redis, user_id: uuid.UUID
-) -> Tuple[Decimal, List[Decimal]]:
+) -> tuple[Decimal, list[Decimal]]:
     """Fetches recent transaction amounts and calculates the rolling mean."""
     redis_key = f"user:{user_id}:txn_amounts"
     recent_amounts_str = await redis_client.lrange(redis_key, 0, -1)
@@ -72,7 +74,7 @@ async def _create_and_persist_transaction(
         user_id=user_id,
         amount=amount,
         currency="INR",
-        txn_date=datetime.now(tz=timezone.utc),
+        txn_date=datetime.now(tz=UTC),
         status=random.choice(["paid", "failed"]),
         meta_data={"is_anomaly": is_anomaly},
     )
@@ -101,21 +103,22 @@ async def event_generator(
     anomalies, and streams the results to the client. The process stops when the
     client disconnects.
     """
+    logger.info(f"Starting SSE connection for user {user_id}")
     try:
-        print(f"Starting SSE connection for user {user_id}")
         yield ": ping\n\n"
 
         while True:
             # Check for client disconnection
             if await request.is_disconnected():
-                print(f"Client for user {user_id} disconnected. Stopping simulation.")
+                logger.info(
+                    f"Client for user {user_id} disconnected. Stopping simulation."
+                )
                 break
 
             # Create new DB session for each transaction to avoid timeout issues
             async with AsyncSessionMaker() as db:
                 try:
                     # 1. Get historical data for anomaly check
-                    print(redis_client)
                     rolling_mean, recent_amounts = await _get_rolling_mean(
                         redis_client, user_id
                     )
@@ -142,7 +145,7 @@ async def event_generator(
                     yield f"data: {payload}\n\n"
 
                 except Exception as e:
-                    print(f"Error processing transaction for user {user_id}: {e}")
+                    logger.exception(f"Error processing transaction for user {user_id}")
                     # Send error event to client
                     yield f"event: error\ndata: {str(e)}\n\n"
 
@@ -150,13 +153,13 @@ async def event_generator(
             await asyncio.sleep(INTERVAL_SECONDS)
 
     except asyncio.CancelledError:
-        print(f"SSE connection cancelled for user {user_id}")
+        logger.warning(f"SSE connection cancelled for user {user_id}")
         raise
     except Exception as e:
-        print(f"Fatal error in SSE event generator for user {user_id}: {e}")
+        logger.exception(f"Fatal error in SSE event generator for user {user_id}")
         yield f"event: error\ndata: Fatal error: {str(e)}\n\n"
     finally:
-        print(f"Closing SSE connection for user {user_id}")
+        logger.info(f"Closing SSE connection for user {user_id}")
 
 
 @router.get("/sse/transactions/{user_id}")
@@ -166,7 +169,7 @@ async def sse_transactions(
     """
     Establishes an SSE connection to stream simulated transactions for a user.
     """
-    print("SSE connection established")
+    logger.info(f"SSE connection established for user {user_id}")
     return StreamingResponse(
         event_generator(request, user_id, redis_client),
         media_type="text/event-stream",

@@ -1,17 +1,20 @@
-from typing import Annotated
-from datetime import datetime
+import logging
 import uuid
+from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import asc
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import desc, select
 
 from src.database import get_session
-from src.models import Transaction, TransactionFilters, ListTransactionsResponse
+from src.models import ListTransactionsResponse, Transaction, TransactionFilters
 from src.utils import decode_base64, encode_base64
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/transactions", response_model=ListTransactionsResponse)
@@ -58,6 +61,8 @@ async def get_transactions(
         )
 
         return ListTransactionsResponse(transactions=txns, cursor=cursor)
-    except Exception as e:
-        print(f"Error fetching transactions: {e}")
-        return ListTransactionsResponse(transactions=[], cursor="")
+    except SQLAlchemyError:
+        logger.exception("Error fetching transaction")
+        raise HTTPException(
+            status_code=500, detail="Could not fetch transactions from the database."
+        )
